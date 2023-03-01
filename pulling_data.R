@@ -50,3 +50,5 @@ small_frame <- merged_approval %>%
   filter(Politician %in% repubs_of_interest)
 
 RD_elecs <- read_csv("R-DElections.csv")
+small_frame2 <- small_frame %>% merge(RD_elecs) %>% merge(read_csv('swing.csv'))
+write_csv(small_frame2,"Summary.csv")
