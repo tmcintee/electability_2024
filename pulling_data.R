@@ -1,5 +1,6 @@
 require(tidyverse)
 require(ggpubr)
+require(readODS)
 options(scipen = 6, digits = 3)
 mc_files <- list.files(path="Morning Consult/")
 mc_dat <- read_csv(paste0("Morning Consult/",mc_files[[1]]))
@@ -20,7 +21,7 @@ mc_dat <- mc_dat %>% distinct()
 biden_approval <- mc_dat %>%
   filter(Politician == "Joe Biden") %>%
   group_by(State) %>%
-  summarise(`Biden net approval` = mean(`Net Approval`),
+  summarise(`Democratic net approval` = mean(`Net Approval`),
             `Sample size` = sum(`Sample size`))
 #Process gubernatorial approval:
 gub_approval <- mc_dat %>%
@@ -33,22 +34,46 @@ gub_affil <- read_csv("gub_affil.csv")
 merged_approval <- gub_approval %>%
   merge(biden_approval) %>%
   merge(gub_affil) %>%
+  mutate(`Background` = "Governor",`Historical win rate` = 10/24) %>%
+  add_case(State = "Florida",
+           Politician = "Donald Trump",
+           Affiliation = "R",
+           `Democratic net approval`= - .088,
+           `Net approval` = -.122,
+           `Background` = "Non-incumbent president",
+           `Historical win rate` = 1/4) %>%
+  add_case(State = "Indiana",
+           Politician = "Mike Pence",
+           Affiliation = "R",
+           `Democratic net approval`= -.19,
+           `Net approval` = 0,
+           `Background` = "Vice president",
+           `Historical win rate` = 7/11) %>%
+  add_case(State = "South Carolina",
+           Politician = "Nikki Haley",
+           Affiliation = "R",
+           `Democratic net approval`= -.1527,
+           `Net approval` = .28,
+           `Background` = "Ambassador",
+           `Historical win rate` = 2/5 ) %>%
   mutate(`Adjusted net approval` =
-           (Affiliation == "R") * (`Net approval` + `Biden net approval`)+
-           (Affiliation == "D") * (`Net approval` - `Biden net approval`))
-merged_approval <- merged_approval %>% add_case(State = "United States",
-                                                Politician = "Donald Trump",
-                                                Affiliation = "R",
-                                                `Biden net approval`= - .093,
-                                                `Net approval` = -.129,
-                                                `Adjusted net approval` = - .036)
-
-
-repubs_of_interest <- c("Donald Trump","Greg Abbott","Brian Kemp","Chris Sununu","Glenn Youngkin","Kristi Noem","Ron DeSantis")
+           (Affiliation == "R") * (`Net approval` + `Democratic net approval`)+
+           (Affiliation == "D") * (`Net approval` - `Democratic net approval`))
+repubs_of_interest <- c("Donald Trump","Mike Pence","Nikki Haley",
+                        "Greg Abbott","Brian Kemp","Chris Sununu","Glenn Youngkin","Kristi Noem","Ron DeSantis")
 
 small_frame <- merged_approval %>%
   filter(Politician %in% repubs_of_interest)
 
-RD_elecs <- read_csv("R-DElections.csv")
-small_frame2 <- small_frame %>% merge(RD_elecs) %>% merge(read_csv('swing.csv'))
+RD_elecs <- read_ods("R-DElections.ods")
+small_frame2 <- small_frame %>%
+  merge(RD_elecs) %>%
+  merge(read_csv('swing.csv')) %>%
+  select(c("Politician","Background","State","Historical win rate","Home state edge","Adjusted net approval","Electoral performance A","Electoral performance B")) %>%
+  mutate(`Composite score` = 2 * `Home state edge`+
+           100 * `Adjusted net approval`+
+           100 * `Electoral performance A`+
+           0.01 * `Electoral performance B` / sd(`Electoral performance B`)+
+           100 * `Historical win rate`)
 write_csv(small_frame2,"Summary.csv")
+
