@@ -56,16 +56,25 @@ merged_approval <- gub_approval %>%
            `Net approval` = .28,
            `Background` = "Ambassador",
            `Historical win rate` = 2/5 ) %>%
+  add_case(State = "South Carolina",
+           Politician = "Tim Scott",
+           Affiliation = "R",
+           `Democratic net approval`= -.1527,
+           `Net approval` = .11,
+           `Background` = "Senator",
+           `Historical win rate` = 5/20 ) %>%
   mutate(`Adjusted net approval` =
            (Affiliation == "R") * (`Net approval` + `Democratic net approval`)+
            (Affiliation == "D") * (`Net approval` - `Democratic net approval`))
 repubs_of_interest <- c("Donald Trump","Mike Pence","Nikki Haley",
-                        "Greg Abbott","Brian Kemp","Chris Sununu","Glenn Youngkin","Kristi Noem","Ron DeSantis")
+                        "Greg Abbott","Brian Kemp","Chris Sununu","Glenn Youngkin","Kristi Noem","Ron DeSantis",
+                        "Doug Burgum", "Tim Scott")
 
 small_frame <- merged_approval %>%
   filter(Politician %in% repubs_of_interest)
 
-RD_elecs <- read_ods("R-DElections.ods")
+RD_elecs <- read_ods("R-DElections.ods") %>%
+  filter(!(Politician == "Tim Scott" & Year < 2022))
 small_frame2 <- small_frame %>%
   merge(RD_elecs) %>%
   merge(read_csv('swing.csv')) %>%
@@ -75,5 +84,12 @@ small_frame2 <- small_frame %>%
            100 * `Electoral performance A`+
            0.01 * `Electoral performance B` / sd(`Electoral performance B`)+
            100 * `Historical win rate`)
-write_csv(small_frame2,"Summary.csv")
 
+source("Head2Head.R")
+small_frame3 <- small_frame2 %>%
+  merge(headToHead) %>%
+  select(c("Politician","Background","State","Historical win rate","Home state edge","Adjusted net approval","Electoral performance A","Electoral performance B", "Net", "Composite score")) %>%
+  mutate(`Polling performance` = Net,
+         `Composite score` = `Composite score` + 300 * `Polling performance`)
+
+write_csv(small_frame3,"Summary.csv")
