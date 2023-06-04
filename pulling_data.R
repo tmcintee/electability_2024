@@ -88,8 +88,13 @@ small_frame2 <- small_frame %>%
 source("Head2Head.R")
 small_frame3 <- small_frame2 %>%
   merge(headToHead) %>%
-  select(c("Politician","Background","State","Historical win rate","Home state edge","Adjusted net approval","Electoral performance A","Electoral performance B", "Net", "Composite score")) %>%
-  mutate(`Polling performance` = Net,
-         `Composite score` = `Composite score` + 300 * `Polling performance`)
+  select(c("Politician","Background","Historical win rate","State","Home state edge","Adjusted net approval","Electoral performance A","Electoral performance B", "Polling performance", "Composite score")) %>%
+  mutate(`Composite score` = 10*(`Home state edge` / sd(`Home state edge`)+
+           `Adjusted net approval` / sd(`Adjusted net approval`)+
+           0.5*`Electoral performance A` / sd (`Electoral performance A`)+
+           0.5*`Electoral performance B` / sd(`Electoral performance B`)+
+           `Historical win rate` / sd(`Historical win rate`)+
+           `Polling performance` / sd(`Polling performance`)))
 
+names(small_frame3) <- c("Politician","Background","Score","State","Score","Approval","Elections","Elections", "Polling", "Overall")
 write_csv(small_frame3,"Summary.csv")

@@ -30,6 +30,6 @@ ProcessPolls <- function(poll_file)
            Type = "Poll") %>%
     #filter(Candidate %in% candidate_vector) %>%
     ungroup %>%
-    select(Candidate,State,Year,Democratic.Vote,Republican.Vote,Weight,Type,poll_id)
+    select(Candidate,State,Year,Democratic.Vote,Republican.Vote,Share.Democratic,Share.Republican,Weight,Type,poll_id)
   return(polls_condensed)
 }
