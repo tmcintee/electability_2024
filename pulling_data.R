@@ -63,38 +63,64 @@ merged_approval <- gub_approval %>%
            `Net approval` = .11,
            `Background` = "Senator",
            `Historical win rate` = 5/20 ) %>%
+  add_case(State = "New Jersey",
+           Politician = "Chris Christie",
+           Affiliation = "R",
+           `Democratic net approval`= .141, #2016 election result proxy
+           `Net approval` = -.57,
+           `Background` = "Governor",
+           `Historical win rate` = 10/24 ) %>%
+  add_case(State = "Ohio",
+           Politician = "Vivek Ramaswamy",
+           Affiliation = "R",
+           `Democratic net approval`= NA, #2016 election result proxy
+           `Net approval` = NA,
+           `Background` = "Miscellaneous",
+           `Historical win rate` = 1/7 ) %>%
   mutate(`Adjusted net approval` =
            (Affiliation == "R") * (`Net approval` + `Democratic net approval`)+
            (Affiliation == "D") * (`Net approval` - `Democratic net approval`))
 repubs_of_interest <- c("Donald Trump","Mike Pence","Nikki Haley",
-                        "Greg Abbott","Brian Kemp","Chris Sununu","Glenn Youngkin","Kristi Noem","Ron DeSantis",
-                        "Doug Burgum", "Tim Scott")
+                        #"Greg Abbott","Brian Kemp","Chris Sununu","Glenn Youngkin","Kristi Noem",
+                        "Ron DeSantis", "Doug Burgum", "Tim Scott","Vivek Ramaswamy",
+                        "Chris Christie","Asa Hutchinson")
 
 small_frame <- merged_approval %>%
   filter(Politician %in% repubs_of_interest)
 
 RD_elecs <- read_ods("R-DElections.ods") %>%
   filter(!(Politician == "Tim Scott" & Year < 2022))
-small_frame2 <- small_frame %>%
-  merge(RD_elecs) %>%
-  merge(read_csv('swing.csv')) %>%
-  select(c("Politician","Background","State","Historical win rate","Home state edge","Adjusted net approval","Electoral performance A","Electoral performance B")) %>%
-  mutate(`Composite score` = 2 * `Home state edge`+
-           100 * `Adjusted net approval`+
-           100 * `Electoral performance A`+
-           0.01 * `Electoral performance B` / sd(`Electoral performance B`)+
-           100 * `Historical win rate`)
 
 source("Head2Head.R")
-small_frame3 <- small_frame2 %>%
-  merge(headToHead) %>%
-  select(c("Politician","Background","Historical win rate","State","Home state edge","Adjusted net approval","Electoral performance A","Electoral performance B", "Polling performance", "Composite score")) %>%
-  mutate(`Composite score` = 10*(`Home state edge` / sd(`Home state edge`)+
-           `Adjusted net approval` / sd(`Adjusted net approval`)+
-           0.5*`Electoral performance A` / sd (`Electoral performance A`)+
-           0.5*`Electoral performance B` / sd(`Electoral performance B`)+
-           `Historical win rate` / sd(`Historical win rate`)+
-           `Polling performance` / sd(`Polling performance`)))
+source("Favorables.R")
+small_frame2 <- small_frame %>%
+  merge(RD_elecs,all.x = TRUE) %>%
+  merge(read_csv('swing.csv'),all.x = TRUE) %>%
+  merge(headToHead,all.x = TRUE) %>%
+  merge(politicians_favorables, all.x = TRUE) %>%
+  select(c("Politician","Background","State","Historical win rate","Home state edge","Adjusted net approval","Adjusted net favorable","Electoral performance A","Electoral performance B","Polling performance")) %>%
+  mutate(`Electoral performance B` = 0.1*`Electoral performance B` / max(abs(`Electoral performance B`),na.rm = TRUE),
+         `Home state edge` = `Home state edge` / 54) #If California were a swing state
 
-names(small_frame3) <- c("Politician","Background","Score","State","Score","Approval","Elections","Elections", "Polling", "Overall")
+
+
+small_frame3 <- small_frame2 %>%
+  select(c("Politician","Background","Historical win rate","State","Home state edge","Adjusted net approval","Adjusted net favorable","Electoral performance A","Electoral performance B", "Polling performance")) %>%
+  replace(is.na(.),0) %>%
+  mutate(`Composite score` = (
+    100*`Polling performance` +
+    100*`Adjusted net favorable` +
+    100*`Electoral performance A` +
+    100*`Electoral performance B` +
+    100*`Historical win rate`+
+    100*`Home state edge`
+    )) %>%
+  select(Politician, Background, State, `Composite score`,
+         `Polling performance`,`Adjusted net favorable`,
+         `Electoral performance A`,
+         `Electoral performance B`) %>%
+  replace(. == 0,NA) %>%
+  arrange(-`Composite score`)
+
+names(small_frame3) <- c("Politician","Background","State","Score","Polls A","Polls B","Elections A","Elections B")
 write_csv(small_frame3,"Summary.csv")

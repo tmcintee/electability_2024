@@ -2,7 +2,6 @@
 require(tidyverse)
 require(ggrepel)
 polls_processed <- ProcessPolls("president_polls.csv")
-#Remove two candidate pollshttp://127.0.0.1:19177/graphics/plot_zoom_png?width=1920&height=1009
 #Remove polls with only two candidates
 polls_filtered <- polls_processed %>%
   group_by(poll_id) %>%
@@ -15,12 +14,10 @@ polls_filtered$Candidate[polls_filtered$Candidate %in% other_dems] <- "Other Dem
 polls_summarized <- polls_filtered %>%
   group_by(Candidate) %>%
   summarise(n = n(), Mean.Democratic.Vote.Bonus = sum(Democratic.Vote * Weight, na.rm = TRUE)/(sum(Weight, na.rm = TRUE)),
-            Mean.Republican.Vote.Bonus = sum(Republican.Vote * Weight, na.rm = TRUE)/(sum(Weight, na.rm = TRUE)),
-            DPlus = Mean.Democratic.Vote.Bonus * sqrt(sum(Weight * Weight,na.rm = TRUE)),
-            RPlus = Mean.Republican.Vote.Bonus * sqrt(sum(Weight * Weight, na.rm = TRUE))) %>%
+            Mean.Republican.Vote.Bonus = sum(Republican.Vote * Weight, na.rm = TRUE)/(sum(Weight, na.rm = TRUE))) %>%
+  ungroup() %>%
   mutate(Net.Republican = Mean.Republican.Vote.Bonus - Mean.Democratic.Vote.Bonus,
-         `Polling performance` = RPlus - 1.5 * DPlus,
-         Test = RPlus / Mean.Republican.Vote.Bonus - DPlus / Mean.Democratic.Vote.Bonus)
+         `Polling performance` = Net.Republican - Mean.Democratic.Vote.Bonus)
 polls_summarized$Party <- "Republican"
 polls_summarized$Party[polls_summarized$Candidate == "Joe Biden"| polls_summarized$Candidate == "Other Democrats"] <- "Democrat"
 
