@@ -37,3 +37,27 @@ politicians_favorables <- favorables_trimmed %>%
   summarize(net_favorable = 0.01*sum(weighted_net,na.rm = TRUE)/sum(weight, na.rm = TRUE))
 
 names(politicians_favorables) <- c("Politician","Adjusted net favorable")
+
+
+favorables_example <- favorables[favorables$poll_id == 84165,]
+favorables_example <- favorables_example %>%
+  filter(politician %in% repubs_of_interest) %>%
+  pivot_longer(cols = "favorable":"unfavorable",names_to = "opinion",values_to = "percentage") %>%
+  group_by(opinion) %>%
+  mutate(adjusted = percentage - min(percentage))
+
+g1 <- ggplot(favorables_example,aes(x = politician, fill = opinion, y = percentage))+
+  geom_col(position = "dodge")+
+  theme(axis.text.x = element_text(angle = 30))+
+  scale_fill_manual(values = c("gold","dark green"))+
+  labs(x = "Politician", y = "Percentage", title = "Favorability")+
+  expand_limits(y = 50)
+
+g2 <- ggplot(favorables_example,aes(x = politician, fill = opinion, y = adjusted))+
+  geom_col(position = "dodge")+
+  theme(axis.text.x = element_text(angle = 30))+
+  scale_fill_manual(values = c("gold","dark green"))+
+  labs(x = "Politician", y = "Adjusted Percentage", title = "Adjusted Favorability")+
+  expand_limits(y = 50)
+
+ggpubr::ggarrange(g1,g2)

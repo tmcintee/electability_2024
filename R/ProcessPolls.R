@@ -22,8 +22,8 @@ ProcessPolls <- function(poll_file)
            Share.Republican = max(REP, na.rm = TRUE)/100) %>%
     ungroup %>%
     group_by(poll_id) %>%
-    mutate(Democratic.Vote = Share.Democratic - median(Share.Democratic),
-           Republican.Vote = Share.Republican - median(Share.Republican),
+    mutate(Democratic.Vote = Share.Democratic - min(Share.Democratic),
+           Republican.Vote = Share.Republican - min(Share.Republican),
            Year = 2024+as.numeric(start_date-parse_date("2024-11-05"))/366,
            Weight = sqrt(sample_size)*TimeDecay(Year),
            State = state,
